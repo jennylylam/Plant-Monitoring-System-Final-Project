@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is an IoT system that monitors soil moisture levels in a plant and displays the data on a web dashboard. The system will helps user determine when their plant needs watering by alerting the user when the soil is dry. 
+This project is an IoT system that monitors soil moisture levels in a plant and displays the data on a web dashboard. The system will help user determine when their plant needs watering by alerting the user when the soil is dry. 
 
 ## Data Collected
 
