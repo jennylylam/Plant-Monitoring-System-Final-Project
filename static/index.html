@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Monitor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Playfair+Display:wght@500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green: #3B6D11;
+    --green-light: #EAF3DE;
+    --green-mid: #639922;
+    --amber: #BA7517;
+    --amber-light: #FAEEDA;
+    --red: #A32D2D;
+    --red-light: #FCEBEB;
+    --bg: #f7f6f1;
+    --surface: #ffffff;
+    --text: #2C2C2A;
+    --muted: #888780;
+    --border: rgba(0,0,0,0.1);
+  }
+
+  body {
+    font-family: 'DM Mono', monospace;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem;
+  }
+
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    font-weight: 500;
+    color: var(--green);
+  }
+
+  header span {
+    font-size: 0.75rem;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .sensor-select {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .sensor-select label { font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; }
+
+  select {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+  }
+
+  .card .label {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .card .value {
+    font-size: 1.75rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .card .sub {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
+  .status-wet  { color: var(--green); }
+  .status-dry  { color: var(--red); }
+
+  .status-banner {
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .status-banner.wet  { background: var(--green-light); color: var(--green); border: 1px solid #C0DD97; }
+  .status-banner.dry  { background: var(--red-light);   color: var(--red);   border: 1px solid #F7C1C1; }
+  .status-banner.unknown { background: var(--amber-light); color: var(--amber); border: 1px solid #FAC775; }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot.wet { background: var(--green-mid); }
+  .dot.dry { background: var(--red); }
+  .dot.unknown { background: var(--amber); }
+
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .chart-title {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  canvas { max-height: 220px; }
+
+  .history {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .history-header {
+    padding: 1rem 1.25rem;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .history-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    padding: 0.75rem 1.25rem;
+    font-size: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+  }
+
+  .history-row:last-child { border-bottom: none; }
+
+  .pill {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 500;
+  }
+
+  .pill.wet { background: var(--green-light); color: var(--green); }
+  .pill.dry { background: var(--red-light);   color: var(--red);   }
+
+  .error-msg {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    padding: 2rem;
+  }
+
+  .refresh-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    margin-left: auto;
+  }
+
+  .refresh-btn:hover { background: var(--green-light); border-color: #C0DD97; color: var(--green); }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+  }
+
+  .stat-item { text-align: center; }
+  .stat-item .s-val { font-size: 1.1rem; font-weight: 500; }
+  .stat-item .s-lbl { font-size: 0.65rem; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>plant monitor</h1>
+  <span id="last-updated">—</span>
+</header>
+
+<div class="sensor-select">
+  <label>SENSOR</label>
+  <select id="sensor-select" onchange="loadSensor(this.value)">
+    <option value="">loading...</option>
+  </select>
+  <button class="refresh-btn" onclick="init()">refresh</button>
+</div>
+
+<div id="status-banner" class="status-banner unknown">
+  <div class="dot unknown"></div>
+  <span>Loading sensor data...</span>
+</div>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">current status</div>
+    <div class="value" id="cur-status">—</div>
+    <div class="sub" id="cur-time">no data yet</div>
+  </div>
+  <div class="card">
+    <div class="label">last 24h readings</div>
+    <div class="value" id="total-readings">—</div>
+    <div class="sub">total recorded</div>
+  </div>
+  <div class="card">
+    <div class="label">dry percentage</div>
+    <div class="value" id="dry-pct">—</div>
+    <div class="sub" id="wet-dry-counts">— wet / — dry</div>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">moisture history — last 50 readings</div>
+  <canvas id="moisture-chart"></canvas>
+</div>
+
+<div class="history">
+  <div class="history-header">recent readings</div>
+  <div id="history-list"><div class="error-msg">loading...</div></div>
+</div>
+
+<script>
+const API_KEY = 'change-me-to-something-secret';
+const BASE = '';
+
+const headers = { 'X-API-Key': API_KEY };
+let chart = null;
+
+async function apiFetch(path) {
+  const r = await fetch(BASE + path, { headers });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+function fmtTime(ts) {
+  return new Date(ts).toLocaleString('en-US', {
+    month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+async function init() {
+  try {
+    const data = await apiFetch('/api/v1/sensors');
+    const sel = document.getElementById('sensor-select');
+    sel.innerHTML = '';
+    if (!data.sensors.length) {
+      sel.innerHTML = '<option>no sensors found</option>';
+      return;
+    }
+    data.sensors.forEach(s => {
+      const o = document.createElement('option');
+      o.value = s.sensor_id;
+      o.textContent = s.sensor_id + (s.location ? ` (${s.location})` : '');
+      sel.appendChild(o);
+    });
+    loadSensor(data.sensors[0].sensor_id);
+  } catch(e) {
+    document.getElementById('status-banner').innerHTML = '<div class="dot unknown"></div><span>Could not reach API — is the server running?</span>';
+  }
+}
+
+async function loadSensor(sensorId) {
+  if (!sensorId) return;
+  document.getElementById('last-updated').textContent = 'updating...';
+
+  try {
+    const [latest, readings, stats] = await Promise.allSettled([
+      apiFetch(`/api/v1/readings/${sensorId}/latest`),
+      apiFetch(`/api/v1/readings?sensor_id=${sensorId}&limit=50`),
+      apiFetch(`/api/v1/sensors/${sensorId}/stats?hours=24`)
+    ]);
+
+    if (latest.status === 'fulfilled') updateLatest(latest.value);
+    if (readings.status === 'fulfilled') updateChart(readings.value.readings);
+    if (stats.status === 'fulfilled') updateStats(stats.value);
+    if (readings.status === 'fulfilled') updateHistory(readings.value.readings);
+
+    document.getElementById('last-updated').textContent =
+      'updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function updateLatest(r) {
+  const isDry = r.status === 'dry';
+  const banner = document.getElementById('status-banner');
+  banner.className = 'status-banner ' + r.status;
+  banner.innerHTML = `<div class="dot ${r.status}"></div><span>${
+    isDry ? 'Your plant needs water!' : 'Plant is healthy — soil moisture is good.'
+  }</span>`;
+
+  document.getElementById('cur-status').textContent = r.status;
+  document.getElementById('cur-status').className = 'value status-' + r.status;
+  document.getElementById('cur-time').textContent = fmtTime(r.timestamp);
+}
+
+function updateStats(s) {
+  document.getElementById('total-readings').textContent = s.total_readings;
+  document.getElementById('dry-pct').textContent = s.dry_percentage + '%';
+  document.getElementById('dry-pct').className = 'value ' + (s.dry_percentage > 50 ? 'status-dry' : 'status-wet');
+  document.getElementById('wet-dry-counts').textContent =
+    s.wet_count + ' wet / ' + s.dry_count + ' dry';
+}
+
+function updateChart(readings) {
+  const reversed = [...readings].reverse();
+  const labels = reversed.map(r => new Date(r.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+  const data = reversed.map(r => r.moisture);
+  const colors = reversed.map(r => r.status === 'dry' ? '#A32D2D' : '#3B6D11');
+
+  const ctx = document.getElementById('moisture-chart').getContext('2d');
+  if (chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderRadius: 4,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        y: {
+          min: 0, max: 1,
+          ticks: {
+            stepSize: 1,
+            callback: v => v === 1 ? 'dry' : 'wet',
+            font: { family: 'DM Mono', size: 11 }
+          },
+          grid: { color: 'rgba(0,0,0,0.05)' }
+        },
+        x: {
+          ticks: {
+            maxTicksLimit: 8,
+            font: { family: 'DM Mono', size: 10 },
+            maxRotation: 0
+          },
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}
+
+function updateHistory(readings) {
+  const list = document.getElementById('history-list');
+  if (!readings.length) {
+    list.innerHTML = '<div class="error-msg">no readings yet</div>';
+    return;
+  }
+  list.innerHTML = readings.slice(0, 20).map(r => `
+    <div class="history-row">
+      <span>${fmtTime(r.timestamp)}</span>
+      <span class="pill ${r.status}">${r.status}</span>
+      <span style="color: var(--muted); font-size: 0.7rem;">${r.location || '—'}</span>
+    </div>
+  `).join('');
+}
+
+init();
+setInterval(() => {
+  const sel = document.getElementById('sensor-select');
+  if (sel.value) loadSensor(sel.value);
+}, 60000);
+</script>
+</body>
+</html>

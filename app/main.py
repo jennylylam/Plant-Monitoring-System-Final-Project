@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Query, Header
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from datetime import datetime, timezone, timedelta
 from bson import ObjectId
 from contextlib import asynccontextmanager
@@ -28,6 +30,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/")
+def dashboard():
+    return FileResponse("static/index.html")
+
 
 
 # --- Auth ---
